@@ -58,6 +58,9 @@ contract NewsPlatform is AccessControl {
     }
 
     // ... other functions ...
+    function grantAdminRole(address newAdmin) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
+    }
   function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
         return string(abi.encodePacked(_bytes32));
     }

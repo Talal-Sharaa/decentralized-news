@@ -1,9 +1,9 @@
 const hre = require("hardhat");
 
 async function main() {
-  const Donations = await hre.ethers.getContractFactory("Donations");
-  const donations = await Donations.deploy();
-  console.log("Donations contract deployed at:", donations.target);
+  const NewsPlatform = await hre.ethers.getContractFactory("NewsPlatform");
+  const newsPlatform = await NewsPlatform.deploy();
+  console.log("NewsPlatform contract deployed at:", newsPlatform.target);
 }
 
 main().catch((error) => {
