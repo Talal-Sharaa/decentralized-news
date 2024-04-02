@@ -150,4 +150,16 @@ describe("NewsPlatform", function () {
       ).to.be.revertedWith("Publisher not registered");
     });
   });
+  describe("getAllPublishers", function () {
+    it("Should return all registered publishers", async function () {
+      await newsPlatform.connect(owner).registerPublisher(addr1.address);
+      await newsPlatform.connect(owner).registerPublisher(addr2.address);
+
+      const publishers = await newsPlatform.getAllPublishers();
+
+      expect(publishers.length).to.equal(2);
+      expect(publishers[0].publisherID).to.equal(addr1.address);
+      expect(publishers[1].publisherID).to.equal(addr2.address);
+    });
+  });
 });

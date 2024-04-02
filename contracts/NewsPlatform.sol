@@ -21,7 +21,7 @@ contract NewsPlatform is AccessControl {
         int256 reputationScore;
         bool isRegistered;
     }
-
+    address[] public publisherAddresses;
     struct Reader {
         address readerID;
     }
@@ -56,6 +56,32 @@ contract NewsPlatform is AccessControl {
         address publisherID;
         string articleHash;
     }
+function getAllPublishers() public view returns (Publisher[] memory) {
+    uint256 totalPublishers = 0;
+
+    // Count total registered publishers
+    for (uint i = 0; i < publisherAddresses.length; i++) {
+        address publisherAddr = publisherAddresses[i];
+        if (publishers[publisherAddr].isRegistered) {
+            totalPublishers++;
+        }
+    } 
+
+    // Create an array to store publishers
+    Publisher[] memory allPublishers = new Publisher[](totalPublishers);
+
+    // Add registered publishers to the array
+    uint256 index = 0;
+    for (uint i = 0; i < publisherAddresses.length; i++) {
+        address publisherAddr = publisherAddresses[i];
+        if (publishers[publisherAddr].isRegistered) {
+            allPublishers[index] = publishers[publisherAddr];
+            index++;
+        }
+    }
+
+    return allPublishers;
+}
 
     // ... other functions ...
     function grantAdminRole(address newAdmin) public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -68,16 +94,18 @@ contract NewsPlatform is AccessControl {
     function registerPublisher(address publisherAddress) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         require(!publishers[publisherAddress].isRegistered, "Publisher already registered");
+    publishers[publisherAddress] = Publisher({
+        publisherID: publisherAddress,
+        registrationTimestamp: block.timestamp,
+        reputationScore: 0,
+        isRegistered: true
+    });
 
-        publishers[publisherAddress] = Publisher({
-            publisherID: publisherAddress,
-            registrationTimestamp: block.timestamp,
-            reputationScore: 0,
-            isRegistered: true
-        });
+    // Add the new publisher's address to publisherAddresses
+    publisherAddresses.push(publisherAddress);
 
-        grantRole(PUBLISHER_ROLE, publisherAddress);
-    }
+    grantRole(PUBLISHER_ROLE, publisherAddress);
+}
     
     // Add this state variable to your contract
     mapping(uint256 => uint256) public articleVersionCounts;
