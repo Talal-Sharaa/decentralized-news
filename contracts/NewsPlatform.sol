@@ -20,7 +20,6 @@ contract NewsPlatform is AccessControl {
         uint256 registrationTimestamp;
         int256 reputationScore;
         bool isRegistered;
-        string name;
     }
     address[] public publisherAddresses;
     struct Reader {
@@ -109,12 +108,11 @@ function getAllArticleIds() public view returns (uint256[] memory) {
         return string(abi.encodePacked(_bytes32));
     }
 
-    function registerPublisher(address publisherAddress, string calldata publisherName) public {
+    function registerPublisher(address publisherAddress) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         require(!publishers[publisherAddress].isRegistered, "Publisher already registered");
        publishers[publisherAddress] = Publisher({
         publisherID: publisherAddress,
-        name: publisherName, // Store the name
         registrationTimestamp: block.timestamp,
         reputationScore: 0,
         isRegistered: true
