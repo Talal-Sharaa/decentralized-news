@@ -20,6 +20,7 @@ contract NewsPlatform is AccessControl {
         uint256 registrationTimestamp;
         int256 reputationScore;
         bool isRegistered;
+        string name;
     }
     address[] public publisherAddresses;
     struct Reader {
@@ -56,6 +57,14 @@ contract NewsPlatform is AccessControl {
         address publisherID;
         string articleHash;
     }
+    
+    function isAdmin(address user) public view returns (bool) {
+    return hasRole(DEFAULT_ADMIN_ROLE, user);
+}
+    function isPublisher(address user) public view returns (bool) {
+    return hasRole(PUBLISHER_ROLE, user);
+}
+    
 function getAllPublishers() public view returns (Publisher[] memory) {
     uint256 totalPublishers = 0;
 
@@ -82,7 +91,16 @@ function getAllPublishers() public view returns (Publisher[] memory) {
 
     return allPublishers;
 }
+function getAllArticleIds() public view returns (uint256[] memory) {
+    uint256 totalArticles = articleIdCounter;
+    uint256[] memory allArticleIds = new uint256[](totalArticles);
 
+    for (uint256 i = 1; i <= totalArticles; i++) {
+        allArticleIds[i - 1] = i;
+    }
+
+    return allArticleIds;
+}
     // ... other functions ...
     function grantAdminRole(address newAdmin) public onlyRole(DEFAULT_ADMIN_ROLE) {
         grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
@@ -91,16 +109,16 @@ function getAllPublishers() public view returns (Publisher[] memory) {
         return string(abi.encodePacked(_bytes32));
     }
 
-    function registerPublisher(address publisherAddress) public {
+    function registerPublisher(address publisherAddress, string calldata publisherName) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         require(!publishers[publisherAddress].isRegistered, "Publisher already registered");
-    publishers[publisherAddress] = Publisher({
+       publishers[publisherAddress] = Publisher({
         publisherID: publisherAddress,
+        name: publisherName, // Store the name
         registrationTimestamp: block.timestamp,
         reputationScore: 0,
         isRegistered: true
     });
-
     // Add the new publisher's address to publisherAddresses
     publisherAddresses.push(publisherAddress);
 
