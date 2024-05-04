@@ -25,12 +25,12 @@ contract NewsPlatform is AccessControl {
     struct Reader {
         address readerID;
     }
-
+    mapping(address => string) public publisherNames;
     mapping(uint256 => Article) public articles;
     mapping(uint256 => ArticlewithOutVersion) public articleVersionless;
     mapping(address => Publisher) public publishers;
     mapping(address => uint256[]) public publisherArticles; // Maps a publisher address to an array of their article IDs
-
+mapping(string => address) public nameToPublisherAddress;
     mapping(address => Reader) public readers;
     uint256 private articleIdCounter;
 
@@ -50,12 +50,22 @@ contract NewsPlatform is AccessControl {
         mapping(uint256 => ArticleVersion) versionHistory; 
     }
         struct ArticlewithOutVersion {
+            uint256 id;
         string title;
         string content;
         uint256 timestamp;
         address publisherID;
         string articleHash;
     }
+    struct ArticleWithID {
+    uint256 id;
+    string title;
+    string content;
+    uint256 timestamp;
+    address publisherID;
+    string articleHash;
+}
+
     
     function isAdmin(address user) public view returns (bool) {
     return hasRole(DEFAULT_ADMIN_ROLE, user);
@@ -108,7 +118,7 @@ function getAllArticleIds() public view returns (uint256[] memory) {
         return string(abi.encodePacked(_bytes32));
     }
 
-    function registerPublisher(address publisherAddress) public {
+    function registerPublisher(address publisherAddress, string memory name) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         require(!publishers[publisherAddress].isRegistered, "Publisher already registered");
        publishers[publisherAddress] = Publisher({
@@ -119,8 +129,16 @@ function getAllArticleIds() public view returns (uint256[] memory) {
     });
     // Add the new publisher's address to publisherAddresses
     publisherAddresses.push(publisherAddress);
+    publisherNames[publisherAddress] = name; // Store the publisher's name
+    nameToPublisherAddress[name] = publisherAddress; // Add this line
 
     grantRole(PUBLISHER_ROLE, publisherAddress);
+}
+
+function getArticlesByName(string memory name) public view returns (ArticlewithOutVersion[] memory) {
+    address publisherAddress = nameToPublisherAddress[name];
+    require(publisherAddress != address(0), "Publisher not found"); // Check if the name exists
+    return getArticlesByPublisher(publisherAddress);
 }
     
     // Add this state variable to your contract
@@ -153,6 +171,8 @@ function getAllArticleIds() public view returns (uint256[] memory) {
 
     // Add the article to the versionless mapping
     articleVersionless[articleId] = ArticlewithOutVersion({
+            id: articleId,
+
         title: title,
         content: content,
         timestamp: block.timestamp,
@@ -201,22 +221,36 @@ function getArticleHistory(uint256 articleId) public view returns (ArticleVersio
 
     return history;
 }
- function getArticle(uint256 articleId) public view returns (ArticlewithOutVersion memory) {
-        require(articleVersionless[articleId].timestamp != 0, "Article does not exist");
-        return articleVersionless[articleId];
+function getArticle(uint256 articleId) public view returns (ArticleWithID memory) {
+    require(articleVersionless[articleId].timestamp != 0, "Article does not exist");
+    return ArticleWithID({
+        id: articleId,
+        title: articleVersionless[articleId].title,
+        content: articleVersionless[articleId].content,
+        timestamp: articleVersionless[articleId].timestamp,
+        publisherID: articleVersionless[articleId].publisherID,
+        articleHash: articleVersionless[articleId].articleHash
+    });
+}
+
+function getArticlesByPublisher(address publisherAddress) public view returns (ArticlewithOutVersion[] memory) {
+    require(publishers[publisherAddress].isRegistered, "Publisher not registered");
+
+    uint256[] memory articleIds = publisherArticles[publisherAddress];
+    ArticlewithOutVersion[] memory articlesByPublisher = new ArticlewithOutVersion[](articleIds.length); 
+
+    for (uint256 i = 0; i < articleIds.length; i++) {
+        require(articles[articleIds[i]].timestamp != 0, "Article does not exist");
+        articlesByPublisher[i] = ArticlewithOutVersion({
+            id: articleIds[i],
+            title: articles[articleIds[i]].title,
+            content: articles[articleIds[i]].content,
+            timestamp: articles[articleIds[i]].timestamp,
+            publisherID: articles[articleIds[i]].publisherID,
+            articleHash: articles[articleIds[i]].articleHash
+        });
     }
 
-    function getArticlesByPublisher(address publisherAddress) public view returns (ArticlewithOutVersion[] memory) {
-        require(publishers[publisherAddress].isRegistered, "Publisher not registered");
-
-        uint256[] memory articleIds = publisherArticles[publisherAddress];
-        ArticlewithOutVersion[] memory articlesByPublisher = new ArticlewithOutVersion[](articleIds.length); 
-
-        for (uint256 i = 0; i < articleIds.length; i++) {
-            require(articles[articleIds[i]].timestamp != 0, "Article does not exist");
-            articlesByPublisher[i] = articleVersionless[articleIds[i]]; 
-        }
-
-        return articlesByPublisher;
-    }
+    return articlesByPublisher;
+}
 }
