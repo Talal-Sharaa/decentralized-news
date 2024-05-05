@@ -39,6 +39,8 @@ mapping(string => address) public nameToPublisherAddress;
         string articleHash;
         address editorID;
         uint256 editTimestamp; 
+            string title; // Add this field
+    string content; // And this field
     }
 
     struct Article {
@@ -143,55 +145,63 @@ function getArticlesByName(string memory name) public view returns (ArticlewithO
     
     // Add this state variable to your contract
     mapping(uint256 => uint256) public articleVersionCounts;
-
     function submitArticle(string memory title, string memory content) public onlyPublisher {
-    require(bytes(title).length > 0, "Title cannot be empty");
-    require(bytes(content).length > 0, "Content cannot be empty");
+        require(bytes(title).length > 0, "Title cannot be empty");
+        require(bytes(content).length > 0, "Content cannot be empty");
 
-    articleIdCounter++;
-    uint256 articleId = articleIdCounter;
+        articleIdCounter++;
+        uint256 articleId = articleIdCounter;
 
-    bytes32 articleHash = keccak256(abi.encodePacked(title, content));
+        bytes32 articleHash = keccak256(abi.encodePacked(title, content));
 
-    articles[articleId].title = title;
-    articles[articleId].content = content;
-    articles[articleId].timestamp = block.timestamp;
-    articles[articleId].publisherID = msg.sender;
-    articles[articleId].articleHash = bytes32ToString(articleHash);
+        articles[articleId].title = title;
+        articles[articleId].content = content;
+        articles[articleId].timestamp = block.timestamp;
+        articles[articleId].publisherID = msg.sender;
+        articles[articleId].articleHash = bytes32ToString(articleHash);
 
-    uint256 initialVersion = 1;
-    articles[articleId].versionHistory[initialVersion] = ArticleVersion({
-        versionNumber: initialVersion,
-        articleHash: bytes32ToString(articleHash),
-        editorID: msg.sender,
-        editTimestamp: block.timestamp
-    });
+        uint256 initialVersion = 1;
+        articles[articleId].versionHistory[initialVersion] = ArticleVersion({
+            versionNumber: initialVersion,
+            articleHash: bytes32ToString(articleHash),
+            editorID: msg.sender,
+            editTimestamp: block.timestamp,
+            title: title,
+            content: content
+        });
 
-    publisherArticles[msg.sender].push(articleId);
+        // Increment the version count for the article
+        articleVersionCounts[articleId] = initialVersion;
 
-    // Add the article to the versionless mapping
-    articleVersionless[articleId] = ArticlewithOutVersion({
+        publisherArticles[msg.sender].push(articleId);
+
+        // Add the article to the versionless mapping
+        articleVersionless[articleId] = ArticlewithOutVersion({
             id: articleId,
+            title: title,
+            content: content,
+            timestamp: block.timestamp,
+            publisherID: msg.sender,
+            articleHash: bytes32ToString(articleHash)
+        });
+    }
 
-        title: title,
-        content: content,
-        timestamp: block.timestamp,
-        publisherID: msg.sender,
-        articleHash: bytes32ToString(articleHash)
-    });
-}
 
-
-    function updateArticle(uint256 articleId, string memory newTitle, string memory newContent) public onlyPublisher {
-            address originalPublisher = articles[articleId].publisherID;
+    function updateArticle(uint256 articleId, string memory newTitle, string memory newContent) public {
+        // Check if the article exists
         require(articles[articleId].timestamp != 0, "Article does not exist");
-    require(msg.sender == originalPublisher, "Only the original publisher can update.");
+
+        // Check if the sender is the publisher of the article
+        require(msg.sender == articles[articleId].publisherID, "Only the publisher can update the article");
+
+        // Check if the new title and content are not empty
         require(bytes(newTitle).length > 0, "New title cannot be empty");
         require(bytes(newContent).length > 0, "New content cannot be empty");
 
+        // Compute the hash of the new content
         bytes32 newArticleHash = keccak256(abi.encodePacked(newTitle, newContent));
 
-        // Update primary article fields (consider if you want to preserve older versions of these)
+        // Update the article
         articles[articleId].title = newTitle;
         articles[articleId].content = newContent;
         articles[articleId].articleHash = bytes32ToString(newArticleHash);
@@ -202,23 +212,31 @@ function getArticlesByName(string memory name) public view returns (ArticlewithO
             versionNumber: newVersionNumber,
             articleHash: bytes32ToString(newArticleHash),
             editorID: msg.sender,
-            editTimestamp: block.timestamp
+            editTimestamp: block.timestamp,
+            title: newTitle,
+            content: newContent
         });
 
         // Update the version count for the article
         articleVersionCounts[articleId] = newVersionNumber;
     }
-
 function getArticleHistory(uint256 articleId) public view returns (ArticleVersion[] memory) {
+    // Check if the article exists
     require(articles[articleId].timestamp != 0, "Article does not exist");
 
+    // Get the number of versions
     uint256 numberOfVersions = articleVersionCounts[articleId];
-    ArticleVersion[] memory history = new ArticleVersion[](numberOfVersions); 
 
-    for (uint256 i = 1; i <= numberOfVersions; i++) { // Start from version 1
-        history[i - 1] = articles[articleId].versionHistory[i]; 
+    // Create an array to store the versions
+    ArticleVersion[] memory history = new ArticleVersion[](numberOfVersions);
+
+    // Get the versions
+      for (uint256 i = 1; i <= numberOfVersions; i++) { 
+        history[i - 1] = articles[articleId].versionHistory[i];
     }
 
+
+    // Return the versions
     return history;
 }
 function getArticle(uint256 articleId) public view returns (ArticleWithID memory) {
